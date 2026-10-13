@@ -1,0 +1,6 @@
+{
+  "name": "SMART TP & ATP Generator Multijenjang",
+  "description": "Generator AI Tujuan Pembelajaran (TP) dan Alur Tujuan Pembelajaran (ATP) berbasis Capaian Pembelajaran (CP) per elemen untuk TK/PAUD, SD, SMP, SMA, dan SMK sesuai regulasi Kepka BKPDM No. 020 Tahun 2026 (Pendidikan Agama) dan Kepka BSKAP No. 046 Tahun 2025 (Mapel Lainnya).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
