@@ -23,7 +23,7 @@ import { AtpGeneratorView } from './components/AtpGeneratorView';
 import { ProtaPromesView } from './components/ProtaPromesView';
 import { TraceabilityMatrixView } from './components/TraceabilityMatrixView';
 import { ExportView } from './components/ExportView';
-import { AlertCircle, Loader2, Sparkles, CheckCircle2, Zap } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, CheckCircle2, Zap, Calendar, FileSpreadsheet } from 'lucide-react';
 import {
   apiAnalyzeCp,
   apiGenerateTp,
@@ -297,6 +297,10 @@ export default function App() {
 
       if (data?.quotaNotice) setQuotaNotice(data.quotaNotice);
       setAtpResult(data);
+      if (data?.atpList && data.atpList.length > 0) {
+        const fullProta = generateFullProtaPromes(data.atpList, learningIdentity, schoolIdentity, true);
+        setProtaPromesResult(fullProta);
+      }
       setCurrentTab('atp');
     } catch (err: any) {
       setErrorMsg(err?.message || 'Terjadi kesalahan saat menyusun ATP.');
@@ -532,16 +536,52 @@ export default function App() {
         )}
 
         {/* TAB 5: PROGRAM TAHUNAN & SEMESTER (PROTA & PROMES) */}
-        {currentTab === 'prota_promes' && protaPromesResult && (
-          <ProtaPromesView
-            protaPromes={protaPromesResult}
-            setProtaPromes={setProtaPromesResult}
-            learningIdentity={learningIdentity}
-            schoolIdentity={schoolIdentity}
-            onGoToTraceability={() => setCurrentTab('traceability')}
-            onGoToExport={() => setCurrentTab('export')}
-            onResyncFromAtp={handleResyncProtaPromes}
-          />
+        {currentTab === 'prota_promes' && (
+          protaPromesResult ? (
+            <ProtaPromesView
+              protaPromes={protaPromesResult}
+              setProtaPromes={setProtaPromesResult}
+              learningIdentity={learningIdentity}
+              schoolIdentity={schoolIdentity}
+              onGoToTraceability={() => setCurrentTab('traceability')}
+              onGoToExport={() => setCurrentTab('export')}
+              onResyncFromAtp={handleResyncProtaPromes}
+            />
+          ) : atpResult?.atpList && atpResult.atpList.length > 0 ? (
+            (() => {
+              const autoResult = generateFullProtaPromes(atpResult.atpList, learningIdentity, schoolIdentity, true);
+              setProtaPromesResult(autoResult);
+              return (
+                <ProtaPromesView
+                  protaPromes={autoResult}
+                  setProtaPromes={setProtaPromesResult}
+                  learningIdentity={learningIdentity}
+                  schoolIdentity={schoolIdentity}
+                  onGoToTraceability={() => setCurrentTab('traceability')}
+                  onGoToExport={() => setCurrentTab('export')}
+                  onResyncFromAtp={handleResyncProtaPromes}
+                />
+              );
+            })()
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-xl p-8 text-center space-y-4 shadow-xs">
+              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
+                <FileSpreadsheet className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-slate-800">
+                Alur Tujuan Pembelajaran (ATP) Belum Disusun
+              </h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Program Tahunan (Prota) dan Program Semester (Promes) disusun secara otomatis mengikuti Alur Tujuan Pembelajaran (ATP) yang dihasilkan. Silakan susun ATP terlebih dahulu.
+              </p>
+              <button
+                onClick={() => setCurrentTab(tpList.length > 0 ? 'tp' : 'identity')}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs"
+              >
+                <span>{tpList.length > 0 ? 'Buka Daftar TP untuk Susun ATP' : 'Buka Identitas & Elemen CP'}</span>
+              </button>
+            </div>
+          )
         )}
 
         {/* TAB 5: PETA KETERLACAKAN (TRACEABILITY MATRIX) */}
