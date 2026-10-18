@@ -101,7 +101,9 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
 
   const handleFaseChange = (newFase: Fase) => {
     // If there is an official preset matching current subject in the new fase, load it immediately!
-    const matched = findMatchingPreset(newFase, learningIdentity.subjectName, learningIdentity.jenjang);
+    const matched =
+      findMatchingPreset(newFase, learningIdentity.subjectName, learningIdentity.jenjang) ||
+      getPresetsForFaseAndJenjang(newFase, learningIdentity.jenjang)[0];
     if (matched) {
       onLoadPreset(matched);
     } else {
@@ -437,16 +439,39 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
             </div>
 
             {/* Pilihan Cepat Mapel Resmi Sesuai Fase & Jenjang */}
-            <div className="p-3 bg-gradient-to-r from-blue-50/70 to-indigo-50/70 border border-blue-200 rounded-xl space-y-2">
+            <div className="p-3 bg-gradient-to-r from-blue-50/70 to-indigo-50/70 border border-blue-200 rounded-xl space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-blue-950 flex items-center space-x-1.5">
                   <BookOpen className="w-4 h-4 text-blue-600" />
-                  <span>Katalog Mapel Resmi {learningIdentity.fase} ({jenjangConfig.label})</span>
+                  <span>Pilih Mata Pelajaran Resmi {learningIdentity.fase} ({jenjangConfig.label})</span>
                 </label>
                 <span className="text-[10px] font-semibold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full">
-                  {fasePresets.length} Mapel Resmi
+                  {fasePresets.length} Mapel Resmi Tersedia
                 </span>
               </div>
+
+              {/* Quick Subject Clickable Chips */}
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                {fasePresets.map((p) => {
+                  const isSelected = matchingPreset?.id === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => onLoadPreset(p)}
+                      title={`${p.title} (${p.regulationRef})`}
+                      className={`px-2.5 py-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer border text-left ${
+                        isSelected
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-blue-50 hover:border-blue-300'
+                      }`}
+                    >
+                      {p.subjectName}
+                    </button>
+                  );
+                })}
+              </div>
+
               <select
                 aria-label="Pilih Mata Pelajaran Resmi Sesuai Fase"
                 value={matchingPreset?.id || ''}
@@ -458,15 +483,15 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
                 }}
                 className="w-full px-3 py-2 text-xs border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-semibold text-blue-950 bg-white shadow-2xs"
               >
-                <option value="">-- Pilih Mata Pelajaran Resmi ({fasePresets.length} Pilihan Tersedia) --</option>
+                <option value="">-- Atau Pilih dari Dropdown Mapel ({fasePresets.length} Pilihan) --</option>
                 {fasePresets.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.subjectName} ({p.elements.length} Elemen CP Resmi)
+                    {p.subjectName} ({p.elements.length} Elemen CP Resmi - {p.regulationRef})
                   </option>
                 ))}
               </select>
               <p className="text-[10px] text-blue-800 leading-relaxed">
-                Memilih mapel dari katalog ini akan <strong>otomatis menginput seluruh teks Capaian Pembelajaran (CP) dan elemen autentik</strong> dari <em>Kepka BSKAP Nomor 046/H/KR/2025</em> (atau <em>Kepka BKPDM Nomor 020 Tahun 2026</em> untuk Pendidikan Agama).
+                Memilih mapel dari tombol atau dropdown di atas akan <strong>otomatis menginput seluruh naskah Capaian Pembelajaran (CP) dan elemen autentik</strong> dari <em>Kepka BSKAP Nomor 046/H/KR/2025</em> (atau <em>Kepka BKPDM Nomor 020 Tahun 2026</em> untuk Pendidikan Agama).
               </p>
             </div>
 
@@ -478,11 +503,29 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
                 </label>
                 <input
                   type="text"
+                  list="official-fase-subjects-list"
                   value={learningIdentity.subjectName}
-                  onChange={(e) => setLearningIdentity((p) => ({ ...p, subjectName: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLearningIdentity((p) => ({ ...p, subjectName: val }));
+                    // If exact match found from official presets, auto-load authentic CP elements
+                    const directMatch = fasePresets.find(
+                      (p) => p.subjectName.toLowerCase() === val.trim().toLowerCase()
+                    );
+                    if (directMatch) {
+                      onLoadPreset(directMatch);
+                    }
+                  }}
                   placeholder="Contoh: Matematika, Bahasa Indonesia, PAI, RPL"
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-medium"
                 />
+                <datalist id="official-fase-subjects-list">
+                  {fasePresets.map((p) => (
+                    <option key={p.id} value={p.subjectName}>
+                      {p.fase} - {p.regulationRef}
+                    </option>
+                  ))}
+                </datalist>
 
                 {/* Status Validasi CP Autentik */}
                 {matchingPreset ? (

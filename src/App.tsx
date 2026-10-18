@@ -465,6 +465,7 @@ export default function App() {
 
         {/* TAB 1: IDENTITAS & ELEMEN CP */}
         {currentTab === 'identity' && (
+          <div className="space-y-6">
             <IdentityForm
               schoolIdentity={schoolIdentity}
               setSchoolIdentity={setSchoolIdentity}

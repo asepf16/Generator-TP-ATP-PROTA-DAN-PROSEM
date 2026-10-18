@@ -1086,7 +1086,7 @@ export const SMA_CURRICULUM_PRESETS: CurriculumPreset[] = [
     minutesPerJp: 45,
     effectiveWeeks: 18,
     targetSemester: 'Fase Penuh (Semua Semester)',
-    regulationRef: 'Pergub Kurikulum Muatan Lokal Jawa Barat / Jawa Tengah',
+    regulationRef: 'Kepka BSKAP Nomor 046/H/KR/2025 & Pergub Mulok Daerah',
     elements: [
       {
         id: 'sma-bd-e-1',
@@ -1125,7 +1125,7 @@ export const SMA_CURRICULUM_PRESETS: CurriculumPreset[] = [
     minutesPerJp: 45,
     effectiveWeeks: 18,
     targetSemester: 'Fase Penuh (Semua Semester)',
-    regulationRef: 'Pergub Kurikulum Muatan Lokal Jawa Barat / Jawa Tengah',
+    regulationRef: 'Kepka BSKAP Nomor 046/H/KR/2025 & Pergub Mulok Daerah',
     elements: [
       {
         id: 'sma-bd-f-1',
