@@ -1,4 +1,5 @@
 import { getPhaseDetails } from '../data/curriculumPresets';
+import { getReligionMatrix, ReligionMatrix, ReligionMatrixItem } from './religionMatrices';
 
 // Authentic curriculum database for PAIBP SMP Fase D (3 Years / 6 Semesters / 5 Elements per semester = 30 TP)
 const PAIBP_SMP_MATRIX: Record<
@@ -469,39 +470,47 @@ export function runFallbackAnalysis(learningIdentity: any, elements: any[]) {
 }
 
 export function runFallbackTp(learningIdentity: any, elements: any[]) {
-  const isPaibpSmp =
-    (learningIdentity?.subjectName?.toLowerCase().includes('pai') ||
-      learningIdentity?.subjectName?.toLowerCase().includes('agama islam') ||
-      learningIdentity?.subjectName?.toLowerCase().includes('paibp') ||
-      (elements || []).some((e: any) => /qur'?an|hadis|akidah|akhlak|fikih/i.test(e.elementName))) &&
-    (learningIdentity?.fase === 'Fase D' || learningIdentity?.jenjang === 'SMP_MTS');
+  const subject = (learningIdentity?.subjectName || '').toLowerCase();
+  const fase = learningIdentity?.fase || 'Fase D';
 
-  const phaseDetails = getPhaseDetails(learningIdentity?.fase || 'Fase D', learningIdentity?.yearsOfStudy === 4);
+  const isPaibpSmp =
+    (subject.includes('pai') ||
+      subject.includes('agama islam') ||
+      subject.includes('paibp') ||
+      (elements || []).some((e: any) => /qur'?an|hadis|akidah|akhlak|fikih/i.test(e.elementName))) &&
+    (fase === 'Fase D' || learningIdentity?.jenjang === 'SMP_MTS');
+
+  // Check if we have an authentic predefined religion matrix from Kepka BKPDM 020/2026
+  const customReligionMatrix = getReligionMatrix(subject, fase);
+  const activeMatrix = isPaibpSmp ? PAIBP_SMP_MATRIX : customReligionMatrix;
+
+  const phaseDetails = getPhaseDetails(fase, learningIdentity?.yearsOfStudy === 4);
   const effectiveWeeks = Number(learningIdentity?.effectiveWeeksPerSemester) || 18;
   const jpPerWeek = Number(learningIdentity?.jpPerWeek) || 3;
   const totalPhaseJp = effectiveWeeks * jpPerWeek * phaseDetails.totalSemesters;
 
-  // 1. If PAIBP SMP Fase D: Use the authentic 30 TP matrix ensuring all 5 elements in each of the 6 semesters!
-  if (isPaibpSmp) {
+  // 1. If an authentic religion matrix is found (Fase D, Fase E, Fase F, Fase C, etc.):
+  if (activeMatrix) {
     const tpList: any[] = [];
     let counter = 1;
 
     phaseDetails.grades.forEach((gradeInfo) => {
       gradeInfo.semesters.forEach((semInfo) => {
         const matrixKey = `${gradeInfo.gradeCode}-${semInfo.semester}`;
-        const items = PAIBP_SMP_MATRIX[matrixKey] || [];
+        const items = activeMatrix[matrixKey] || [];
 
         items.forEach((item) => {
           const matchedElement = (elements || []).find(
             (e) =>
               e.elementName.toLowerCase().includes(item.elementName.toLowerCase()) ||
-              item.elementName.toLowerCase().includes(e.elementName.toLowerCase())
+              item.elementName.toLowerCase().includes(e.elementName.toLowerCase()) ||
+              (item.elementCode && e.elementCode && e.elementCode.toLowerCase() === item.elementCode.toLowerCase())
           );
 
           const tpCode = `TP-${gradeInfo.gradeCode}.${semInfo.semester}.${item.tpCodeSuffix}`;
 
           tpList.push({
-            id: `tp-pai-${counter++}`,
+            id: `tp-rel-${counter++}`,
             code: tpCode,
             elementId: matchedElement?.id || item.elementCode,
             elementName: matchedElement?.elementName || item.elementName,
@@ -513,22 +522,23 @@ export function runFallbackTp(learningIdentity: any, elements: any[]) {
             suggestedGrade: gradeInfo.gradeName,
             suggestedSemester: semInfo.semester,
             globalSemester: semInfo.globalSemester,
-            recommendedJp: Math.round(totalPhaseJp / 30),
+            recommendedJp: Math.max(2, Math.round(totalPhaseJp / (phaseDetails.totalSemesters * (items.length || 1)))),
           });
         });
       });
     });
 
-    return {
-      tpList,
-      totalRecommendedJp: tpList.reduce((acc, t) => acc + t.recommendedJp, 0),
-      notes:
-        'Khusus Mapel PAIBP Fase D: Seluruh 5 elemen (Al-Qur\'an dan Hadis, Akidah, Akhlak, Fikih, Sejarah Peradaban Islam) HADIR PADA SETIAP SEMESTER di Kelas VII, VIII, dan IX (Total 30 TP sistematis, 5 TP per semester).',
-      isQuotaFallback: true,
-    };
+    if (tpList.length > 0) {
+      return {
+        tpList,
+        totalRecommendedJp: tpList.reduce((acc, t) => acc + t.recommendedJp, 0),
+        notes: `Tujuan Pembelajaran (TP) resmi diselaraskan 100% dengan Naskah CP per Elemen berdasarkan Kepka BKPDM Nomor 020 Tahun 2026. Seluruh elemen hadir pada setiap semester di seluruh tingkat kelas.`,
+        isQuotaFallback: true,
+      };
+    }
   }
 
-  // 2. For any other subject with elements: ENSURE ALL ELEMENTS EXIST IN EVERY SEMESTER!
+  // 2. High-precision pedagogical generator for any other subject or custom elements:
   const tpList: any[] = [];
   let tpCounter = 1;
 
@@ -541,24 +551,30 @@ export function runFallbackTp(learningIdentity: any, elements: any[]) {
         let comp = 'Mengidentifikasi dan Menjelaskan';
         let depth: 'Dasar' | 'Menengah' | 'Kompleks' = 'Dasar';
         if (semInfo.globalSemester <= 2) {
-          comp = 'Mengidentifikasi dan Menjelaskan Konsep Dasar';
+          comp = 'Mengidentifikasi dan Menjelaskan Konsep';
           depth = 'Dasar';
         } else if (semInfo.globalSemester <= 4) {
-          comp = 'Menerapkan dan Mengaitkan Prinsip';
+          comp = 'Menerapkan dan Menganalisis Kaidah';
           depth = 'Menengah';
         } else {
-          comp = 'Menganalisis, Mengevaluasi dan Menyajikan Solusi Kritis';
+          comp = 'Menganalisis Kritis dan Menyajikan Solusi';
           depth = 'Kompleks';
         }
 
-        const sentences = (elem.cpText || '')
-          .split(/(?<=[.!?])\s+/)
+        // Clean CP topic without broken grammar
+        const rawText = elem.cpText || '';
+        const cleanTopic = rawText
+          .replace(/peserta didik (mampu|dapat|memahami|mengenal|menganalisis|mengevaluasi|membiasakan|meneladani)\s+/gi, '')
+          .replace(/^(mampu|dapat|memahami|mengenal|menganalisis|mengevaluasi|membiasakan|meneladani)\s+/gi, '')
+          .trim();
+
+        const sentences = cleanTopic
+          .split(/(?<=[.;!?])\s+/)
           .map((s: string) => s.trim())
-          .filter((s: string) => s.length > 8);
+          .filter((s: string) => s.length > 5);
 
         const targetSentence =
-          sentences[semInfo.globalSemester % (sentences.length || 1)] || elem.cpText?.slice(0, 100) || '';
-        const cleanExcerpt = targetSentence.replace(/peserta didik (mampu|dapat|memahami)\s+/gi, '').trim();
+          sentences[semInfo.globalSemester % (sentences.length || 1)] || cleanTopic.slice(0, 100) || elem.elementName;
 
         const perTpAllocation = Math.max(
           2,
@@ -571,9 +587,9 @@ export function runFallbackTp(learningIdentity: any, elements: any[]) {
           elementId: elem.id,
           elementName: elem.elementName,
           sourceCpExcerpt: targetSentence.slice(0, 90),
-          tpStatement: `Peserta didik mampu ${comp.toLowerCase()} materi ${cleanExcerpt.slice(0, 100)} secara terukur dan kontekstual pada ${gradeInfo.gradeName} Semester ${semInfo.semester}.`,
+          tpStatement: `Peserta didik mampu ${comp.toLowerCase()} mengenai ${targetSentence.slice(0, 110)} secara terukur dan kontekstual pada ${gradeInfo.gradeName} Semester ${semInfo.semester}.`,
           competency: comp,
-          contentScope: cleanExcerpt.slice(0, 60),
+          contentScope: targetSentence.slice(0, 60),
           depthLevel: depth,
           suggestedGrade: gradeInfo.gradeName,
           suggestedSemester: semInfo.semester,
@@ -587,7 +603,7 @@ export function runFallbackTp(learningIdentity: any, elements: any[]) {
   return {
     tpList,
     totalRecommendedJp: tpList.reduce((acc, t) => acc + t.recommendedJp, 0),
-    notes: `Semua elemen CP hadir pada setiap semester dan tahun di ${learningIdentity?.fase || 'Fase'} dengan penomoran sistematis per semester.`,
+    notes: `Semua elemen CP hadir secara terpadu pada setiap semester dan tahun di ${learningIdentity?.fase || 'Fase'} dengan penomoran sistematis per semester.`,
     isQuotaFallback: true,
   };
 }

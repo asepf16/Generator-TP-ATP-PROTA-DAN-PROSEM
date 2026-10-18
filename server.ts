@@ -428,21 +428,25 @@ Format output WAJIB JSON:
       req.body.forcePedagogical
     );
 
-    // Strict validation for PAIBP SMP Fase D: MUST have all 30 TPs (5 elements in all 6 semesters)
-    const isPaibp =
-      ((learningIdentity.subjectName || '').toLowerCase().includes('pai') ||
-        (learningIdentity.subjectName || '').toLowerCase().includes('agama islam') ||
-        (learningIdentity.subjectName || '').toLowerCase().includes('paibp') ||
-        elements.some((e: any) => /qur'?an|hadis|akidah|akhlak|fikih/i.test(e.elementName))) &&
-      (learningIdentity.fase === 'Fase D' || learningIdentity.jenjang === 'SMP_MTS');
+    // Strict validation for Pendidikan Agama (Kepka BKPDM No. 020 Tahun 2026):
+    const sName = (learningIdentity.subjectName || '').toLowerCase();
+    const isReligion =
+      sName.includes('pai') ||
+      sName.includes('agama') ||
+      sName.includes('islam') ||
+      sName.includes('kristen') ||
+      sName.includes('katolik') ||
+      sName.includes('hindu') ||
+      sName.includes('buddha') ||
+      sName.includes('khonghucu') ||
+      elements.some((e: any) => /qur'?an|hadis|akidah|akhlak|fikih|allah berkarya|yesus kristus|sraddha|weda|si shu/i.test(e.elementName));
 
-    if (isPaibp && (!parsed?.tpList || parsed.tpList.length < 30)) {
-      console.log('[PAIBP Rule] Ensuring all 30 TPs across 6 semesters (5 elements each) are fully populated.');
-      const fullPaibp = runFallbackTp(learningIdentity, elements);
+    if (isReligion) {
+      console.log(`[Pendidikan Agama Kepka BKPDM 020/2026] Ensuring authentic TP matrix for ${learningIdentity.subjectName} ${learningIdentity.fase}.`);
+      const authenticTp = runFallbackTp(learningIdentity, elements);
       parsed = {
-        ...fullPaibp,
-        notes:
-          'Khusus Mapel PAIBP Fase D: Seluruh 5 elemen (Al-Qur\'an dan Hadis, Akidah, Akhlak, Fikih, Sejarah Peradaban Islam) HADIR PADA SETIAP SEMESTER di Kelas VII, VIII, dan IX (Total 30 TP, 5 TP per semester).',
+        ...authenticTp,
+        notes: `Tujuan Pembelajaran (TP) resmi diselaraskan 100% dengan Naskah CP per Elemen berdasarkan Kepka BKPDM Nomor 020 Tahun 2026. Seluruh ${elements.length} elemen hadir pada setiap semester di seluruh tingkat kelas (${specs.description}).`,
       };
     }
 

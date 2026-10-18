@@ -50,14 +50,20 @@ export default async function handler(req: any, res: any) {
       httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
     });
 
-    const isPaibp =
-      ((learningIdentity?.subjectName || '').toLowerCase().includes('pai') ||
-        (learningIdentity?.subjectName || '').toLowerCase().includes('agama islam') ||
-        (learningIdentity?.subjectName || '').toLowerCase().includes('paibp')) &&
-      (learningIdentity?.fase === 'Fase D' || learningIdentity?.jenjang === 'SMP_MTS');
+    const sName = (learningIdentity?.subjectName || '').toLowerCase();
+    const isReligion =
+      sName.includes('pai') ||
+      sName.includes('agama') ||
+      sName.includes('islam') ||
+      sName.includes('kristen') ||
+      sName.includes('katolik') ||
+      sName.includes('hindu') ||
+      sName.includes('buddha') ||
+      sName.includes('khonghucu') ||
+      elements.some((e: any) => /qur'?an|hadis|akidah|akhlak|fikih|allah berkarya|yesus kristus|sraddha|weda|si shu/i.test(e.elementName));
 
-    if (isPaibp) {
-      // For PAIBP SMP Fase D, use the authentic 30 TP engine directly for complete accuracy
+    if (isReligion) {
+      // For all Pendidikan Agama subjects across all phases, use the authentic engine directly for complete accuracy with Kepka BKPDM No. 020 Tahun 2026
       return res.status(200).json(runFallbackTp(learningIdentity, elements));
     }
 

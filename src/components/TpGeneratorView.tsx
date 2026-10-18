@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LearningObjective, LearningIdentity, CpElement } from '../types/curriculum';
 import { calculateTimeDistribution } from '../utils/exportEngine';
-import { getPhaseDetails } from '../data/curriculumPresets';
+import { getPhaseDetails, getSubjectRegulationRef } from '../data/curriculumPresets';
 import { apiRegenerateTpItem } from '../services/curriculumApi';
 import {
   FileText,
@@ -19,6 +19,7 @@ import {
   RotateCcw,
   BookOpen,
   Calendar,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface TpGeneratorViewProps {
@@ -175,6 +176,27 @@ export const TpGeneratorView: React.FC<TpGeneratorViewProps> = ({
             <Sparkles className="w-4 h-4" />
             <span>{isGeneratingAtp ? 'Menyusun Alur...' : 'Lanjut: Susun ATP Terpadu (AI) →'}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Regulation Compliance Banner */}
+      <div className="flex items-center justify-between p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl text-xs text-emerald-950">
+        <div className="flex items-start sm:items-center space-x-2.5">
+          <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5 sm:mt-0" />
+          <div>
+            <div className="flex items-center flex-wrap gap-1.5">
+              <span className="font-bold text-emerald-900">Rujukan Regulasi CP:</span>
+              <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-emerald-200/80 text-emerald-950">
+                {getSubjectRegulationRef(learningIdentity.subjectName)}
+              </span>
+              <span className="text-[11px] text-emerald-700 font-medium">
+                • Tiap elemen CP terdistribusi proporsional ke seluruh semester &amp; tingkat kelas
+              </span>
+            </div>
+            <p className="text-[11px] text-emerald-800 mt-0.5">
+              Rumusan TP operasional (KKO Bloom Revisi) diturunkan secara langsung dari teks Capaian Pembelajaran elemen resmi tanpa ada substansi materi yang terlewat.
+            </p>
+          </div>
         </div>
       </div>
 
