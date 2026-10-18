@@ -432,7 +432,7 @@ export function exportToXlsx(state: FullDocumentState) {
 
   // Sheet 1: Identitas & CP
   const identitasData = [
-    ['SMART TP & ATP GENERATOR MULTIJENJANG - KURIKULUM MERDEKA 2025/2026'],
+    ['SMART TP & ATP GENERATOR MULTIJENJANG DAN PROTA PROSEMNYA - By. Asep SF'],
     ['PERENCANAAN SATU FASE PENUH (SEMUA KELAS & SEMESTER)'],
     [''],
     ['Satuan Pendidikan', schoolIdentity.schoolName],

@@ -24,6 +24,12 @@ import { ProtaPromesView } from './components/ProtaPromesView';
 import { TraceabilityMatrixView } from './components/TraceabilityMatrixView';
 import { ExportView } from './components/ExportView';
 import { AlertCircle, Loader2, Sparkles, CheckCircle2, Zap } from 'lucide-react';
+import {
+  apiAnalyzeCp,
+  apiGenerateTp,
+  apiGenerateAtp,
+  apiValidateTraceability,
+} from './services/curriculumApi';
 
 const DRAFT_STORAGE_KEY = 'smart_tp_atp_draft_v1';
 
@@ -190,7 +196,7 @@ export default function App() {
     }
   };
 
-  // 1. Analyze All CP Elements via Backend
+  // 1. Analyze All CP Elements via Resilient API Service
   const handleAnalyzeAll = async () => {
     const emptyElems = elements.filter((el) => !el.cpText.trim());
     if (emptyElems.length > 0) {
@@ -202,23 +208,14 @@ export default function App() {
     setIsAnalyzing(true);
 
     try {
-      const res = await fetch('/api/analyze-cp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolIdentity,
-          learningIdentity,
-          elements,
-          forcePedagogical: engineMode === 'pedagogical',
-        }),
+      const data = await apiAnalyzeCp({
+        schoolIdentity,
+        learningIdentity,
+        elements,
+        forcePedagogical: engineMode === 'pedagogical',
       });
 
-      const data = await res.json();
-      if (!res.ok && !data?.tpList && !data?.elementAnalyses) {
-        throw new Error(data?.error || 'Gagal melakukan analisis CP.');
-      }
-
-      if (data.quotaNotice) setQuotaNotice(data.quotaNotice);
+      if (data?.quotaNotice) setQuotaNotice(data.quotaNotice);
       setAnalysis(data);
       setCurrentTab('analysis');
     } catch (err: any) {
@@ -237,23 +234,14 @@ export default function App() {
     setErrorMsg(null);
     setIsAnalyzing(true);
     try {
-      const res = await fetch('/api/analyze-cp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolIdentity,
-          learningIdentity,
-          elements: [el],
-          forcePedagogical: engineMode === 'pedagogical',
-        }),
+      const data = await apiAnalyzeCp({
+        schoolIdentity,
+        learningIdentity,
+        elements: [el],
+        forcePedagogical: engineMode === 'pedagogical',
       });
 
-      const data = await res.json();
-      if (!res.ok && !data?.elementAnalyses) {
-        throw new Error(data?.error || 'Gagal menganalisis elemen ini.');
-      }
-
-      if (data.quotaNotice) setQuotaNotice(data.quotaNotice);
+      if (data?.quotaNotice) setQuotaNotice(data.quotaNotice);
       setAnalysis(data);
       setCurrentTab('analysis');
     } catch (err: any) {
@@ -263,30 +251,21 @@ export default function App() {
     }
   };
 
-  // 2. Generate TP via Backend
+  // 2. Generate TP via Resilient API Service
   const handleGenerateTp = async () => {
     setErrorMsg(null);
     setIsGeneratingTp(true);
 
     try {
-      const res = await fetch('/api/generate-tp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolIdentity,
-          learningIdentity,
-          elements,
-          analysis,
-          forcePedagogical: engineMode === 'pedagogical',
-        }),
+      const data = await apiGenerateTp({
+        schoolIdentity,
+        learningIdentity,
+        elements,
+        analysis,
+        forcePedagogical: engineMode === 'pedagogical',
       });
 
-      const data = await res.json();
-      if (!res.ok && !data?.tpList) {
-        throw new Error(data?.error || 'Gagal merumuskan Tujuan Pembelajaran (TP).');
-      }
-
-      if (data.quotaNotice) setQuotaNotice(data.quotaNotice);
+      if (data?.quotaNotice) setQuotaNotice(data.quotaNotice);
       setTpList(data.tpList || []);
       setCurrentTab('tp');
     } catch (err: any) {
@@ -296,7 +275,7 @@ export default function App() {
     }
   };
 
-  // 3. Generate ATP Terpadu via Backend
+  // 3. Generate ATP Terpadu via Resilient API Service
   const handleGenerateAtp = async () => {
     if (!tpList || tpList.length === 0) {
       setErrorMsg('Daftar TP belum tersedia untuk menyusun ATP.');
@@ -307,25 +286,16 @@ export default function App() {
     setIsGeneratingAtp(true);
 
     try {
-      const res = await fetch('/api/generate-atp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolIdentity,
-          learningIdentity,
-          tpList,
-          elements,
-          analysis,
-          forcePedagogical: engineMode === 'pedagogical',
-        }),
+      const data = await apiGenerateAtp({
+        schoolIdentity,
+        learningIdentity,
+        tpList,
+        elements,
+        analysis,
+        forcePedagogical: engineMode === 'pedagogical',
       });
 
-      const data = await res.json();
-      if (!res.ok && !data?.atpList) {
-        throw new Error(data?.error || 'Gagal menyusun Alur Tujuan Pembelajaran (ATP).');
-      }
-
-      if (data.quotaNotice) setQuotaNotice(data.quotaNotice);
+      if (data?.quotaNotice) setQuotaNotice(data.quotaNotice);
       setAtpResult(data);
       setCurrentTab('atp');
     } catch (err: any) {
@@ -335,31 +305,22 @@ export default function App() {
     }
   };
 
-  // 4. Validate Traceability Matrix via Backend
+  // 4. Validate Traceability Matrix via Resilient API Service
   const handleValidateTraceability = async () => {
     setErrorMsg(null);
     setIsValidatingTraceability(true);
 
     try {
-      const res = await fetch('/api/validate-traceability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolIdentity,
-          learningIdentity,
-          elements,
-          tpList,
-          atpList: atpResult?.atpList || [],
-          forcePedagogical: engineMode === 'pedagogical',
-        }),
+      const data = await apiValidateTraceability({
+        schoolIdentity,
+        learningIdentity,
+        elements,
+        tpList,
+        atpList: atpResult?.atpList || [],
+        forcePedagogical: engineMode === 'pedagogical',
       });
 
-      const data = await res.json();
-      if (!res.ok && !data?.traceability) {
-        throw new Error(data?.error || 'Gagal mengaudit keterlacakan CP-TP-ATP.');
-      }
-
-      if (data.quotaNotice) setQuotaNotice(data.quotaNotice);
+      if (data?.quotaNotice) setQuotaNotice(data.quotaNotice);
       setTraceability(data);
       setCurrentTab('traceability');
     } catch (err: any) {

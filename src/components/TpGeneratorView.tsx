@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LearningObjective, LearningIdentity, CpElement } from '../types/curriculum';
 import { calculateTimeDistribution } from '../utils/exportEngine';
 import { getPhaseDetails } from '../data/curriculumPresets';
+import { apiRegenerateTpItem } from '../services/curriculumApi';
 import {
   FileText,
   Plus,
@@ -110,21 +111,12 @@ export const TpGeneratorView: React.FC<TpGeneratorViewProps> = ({
     setIsRegeneratingSingle(true);
     try {
       const sourceElement = elements.find((e) => e.elementName === aiRegenModalTp.elementName);
-      const res = await fetch('/api/regenerate-tp-item', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tpItem: aiRegenModalTp,
-          elementCpText: sourceElement?.cpText || '',
-          instruction: regenInstruction,
-        }),
+      const updated = await apiRegenerateTpItem({
+        tpItem: aiRegenModalTp,
+        elementCpText: sourceElement?.cpText || '',
+        instruction: regenInstruction,
       });
 
-      if (!res.ok) {
-        throw new Error('Gagal memperbarui TP');
-      }
-
-      const updated = await res.json();
       setTpList(tpList.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
       setAiRegenModalTp(null);
       setRegenInstruction('');

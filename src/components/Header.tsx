@@ -64,17 +64,22 @@ export const Header: React.FC<HeaderProps> = ({
               TP
             </div>
             <div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-wrap gap-1">
                 <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                  SMART TP & ATP GENERATOR MULTIJENJANG
+                  SMART TP & ATP GENERATOR MULTIJENJANG DAN PROTA PROSEMNYA
                 </h1>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
                   Kemendikdasmen Resmi
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
-                PPA Revisi 2025 • Kepka BKPDM 020/2026 (Pendidikan Agama) &amp; Kepka BSKAP 046/2025 (Mapel Lainnya)
-              </p>
+              <div className="flex items-center space-x-2 flex-wrap text-xs pt-0.5">
+                <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  By. Asep SF
+                </span>
+                <span className="text-slate-500">
+                  PPA Revisi 2025 • Kepka BKPDM 020/2026 (Pendidikan Agama) &amp; Kepka BSKAP 046/2025 (Mapel Lainnya)
+                </span>
+              </div>
             </div>
           </div>
 

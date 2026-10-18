@@ -68,6 +68,8 @@ export interface AnalysisResult {
     message: string;
     severity: 'warning' | 'info' | 'error';
   }[];
+  quotaNotice?: string;
+  isQuotaFallback?: boolean;
 }
 
 export interface LearningObjective {
@@ -106,6 +108,8 @@ export interface AtpItem {
 export interface AtpResult {
   atpList: AtpItem[];
   pedagogicalFlowSummary: string;
+  quotaNotice?: string;
+  isQuotaFallback?: boolean;
 }
 
 export interface TraceabilityItem {
@@ -123,6 +127,8 @@ export interface TraceabilityResult {
   traceability: TraceabilityItem[];
   overallStatus: 'Lengkap' | 'Sebagian' | 'Perlu Perbaikan';
   disclaimer: string;
+  quotaNotice?: string;
+  isQuotaFallback?: boolean;
 }
 
 export interface TimeCalculation {
