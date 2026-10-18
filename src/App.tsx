@@ -465,18 +465,21 @@ export default function App() {
 
         {/* TAB 1: IDENTITAS & ELEMEN CP */}
         {currentTab === 'identity' && (
-          <div className="space-y-6">
             <IdentityForm
               schoolIdentity={schoolIdentity}
               setSchoolIdentity={setSchoolIdentity}
               learningIdentity={learningIdentity}
               setLearningIdentity={setLearningIdentity}
+              elements={elements}
+              setElements={setElements}
               onLoadPreset={handleLoadPreset}
             />
 
             <ElementsCpManager
               elements={elements}
               setElements={setElements}
+              learningIdentity={learningIdentity}
+              onLoadPreset={handleLoadPreset}
               onAnalyzeAll={handleAnalyzeAll}
               onAnalyzeSingle={handleAnalyzeSingle}
               isAnalyzing={isAnalyzing}

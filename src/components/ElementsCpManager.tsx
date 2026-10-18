@@ -1,5 +1,10 @@
-import React, { useState } from 'react';
-import { CpElement } from '../types/curriculum';
+import React, { useState, useMemo } from 'react';
+import { CpElement, LearningIdentity } from '../types/curriculum';
+import {
+  findMatchingPreset,
+  getSubjectRegulationRef,
+  CurriculumPreset,
+} from '../data/curriculumPresets';
 import {
   Plus,
   Trash2,
@@ -15,11 +20,16 @@ import {
   FileText,
   AlertCircle,
   HelpCircle,
+  ShieldCheck,
+  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 
 interface ElementsCpManagerProps {
   elements: CpElement[];
   setElements: React.Dispatch<React.SetStateAction<CpElement[]>>;
+  learningIdentity?: LearningIdentity;
+  onLoadPreset?: (preset: CurriculumPreset) => void;
   onAnalyzeAll: () => void;
   onAnalyzeSingle: (element: CpElement) => void;
   isAnalyzing: boolean;
@@ -31,6 +41,8 @@ interface ElementsCpManagerProps {
 export const ElementsCpManager: React.FC<ElementsCpManagerProps> = ({
   elements,
   setElements,
+  learningIdentity,
+  onLoadPreset,
   onAnalyzeAll,
   onAnalyzeSingle,
   isAnalyzing,
@@ -41,6 +53,11 @@ export const ElementsCpManager: React.FC<ElementsCpManagerProps> = ({
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const matchingPreset = useMemo(() => {
+    if (!learningIdentity) return undefined;
+    return findMatchingPreset(learningIdentity.fase, learningIdentity.subjectName, learningIdentity.jenjang);
+  }, [learningIdentity]);
 
   // Add Element
   const handleAddElement = () => {

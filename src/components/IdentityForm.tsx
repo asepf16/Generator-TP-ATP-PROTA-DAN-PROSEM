@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { SchoolIdentity, LearningIdentity, Jenjang, Fase } from '../types/curriculum';
+import React, { useState, useMemo } from 'react';
+import { SchoolIdentity, LearningIdentity, Jenjang, Fase, CpElement } from '../types/curriculum';
 import {
   JENJANG_CONFIG,
   recommendFase,
@@ -7,15 +7,32 @@ import {
   CurriculumPreset,
   getPhaseDetails,
   getSubjectRegulationRef,
+  getPresetsForFaseAndJenjang,
+  findMatchingPreset,
 } from '../data/curriculumPresets';
 import { TemplateCatalogModal } from './TemplateCatalogModal';
-import { Building2, BookOpen, Clock, Sparkles, Layers, Info, Calendar, ShieldCheck } from 'lucide-react';
+import {
+  Building2,
+  BookOpen,
+  Clock,
+  Sparkles,
+  Layers,
+  Info,
+  Calendar,
+  ShieldCheck,
+  CheckCircle2,
+  RefreshCw,
+  FileCheck,
+  Award,
+} from 'lucide-react';
 
 interface IdentityFormProps {
   schoolIdentity: SchoolIdentity;
   setSchoolIdentity: React.Dispatch<React.SetStateAction<SchoolIdentity>>;
   learningIdentity: LearningIdentity;
   setLearningIdentity: React.Dispatch<React.SetStateAction<LearningIdentity>>;
+  elements: CpElement[];
+  setElements: React.Dispatch<React.SetStateAction<CpElement[]>>;
   onLoadPreset: (preset: CurriculumPreset) => void;
 }
 
@@ -24,36 +41,87 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
   setSchoolIdentity,
   learningIdentity,
   setLearningIdentity,
+  elements,
+  setElements,
   onLoadPreset,
 }) => {
   const [isCatalogOpen, setIsCatalogOpen] = useState<boolean>(false);
   const jenjangConfig = JENJANG_CONFIG[learningIdentity.jenjang];
   const phaseDetails = getPhaseDetails(learningIdentity.fase, learningIdentity.yearsOfStudy === 4);
 
+  // List of presets for current fase and jenjang
+  const fasePresets = useMemo(() => {
+    return getPresetsForFaseAndJenjang(learningIdentity.fase, learningIdentity.jenjang);
+  }, [learningIdentity.fase, learningIdentity.jenjang]);
+
+  // Find matching preset for current subject
+  const matchingPreset = useMemo(() => {
+    return findMatchingPreset(learningIdentity.fase, learningIdentity.subjectName, learningIdentity.jenjang);
+  }, [learningIdentity.fase, learningIdentity.subjectName, learningIdentity.jenjang]);
+
+  // Check if currently loaded elements match the official preset
+  const isSyncedWithOfficial = useMemo(() => {
+    if (!matchingPreset || elements.length === 0) return false;
+    if (elements.length !== matchingPreset.elements.length) return false;
+    return elements.every((el, idx) => {
+      const target = matchingPreset.elements[idx];
+      return (
+        target &&
+        el.elementName.trim().toLowerCase() === target.elementName.trim().toLowerCase() &&
+        el.cpText.trim() === target.cpText.trim()
+      );
+    });
+  }, [matchingPreset, elements]);
+
   const handleJenjangChange = (newJenjang: Jenjang) => {
     const config = JENJANG_CONFIG[newJenjang];
     const defaultGrade = config.gradeOptions[0];
     const recFase = recommendFase(newJenjang, defaultGrade);
 
-    setLearningIdentity((prev) => ({
-      ...prev,
-      jenjang: newJenjang,
-      grade: defaultGrade,
-      fase: recFase,
-      minutesPerJp: config.defaultMinutesPerJp,
-      jpPerWeek: config.defaultJpPerWeek,
-      vocationalProgram: newJenjang === 'SMK_MAK' ? (prev.vocationalProgram || 'Rekayasa Perangkat Lunak') : undefined,
-      yearsOfStudy: newJenjang === 'SMK_MAK' ? 3 : undefined,
-    }));
+    // Look for matching preset or first available in new jenjang
+    const matched =
+      findMatchingPreset(recFase, learningIdentity.subjectName, newJenjang) ||
+      getPresetsForFaseAndJenjang(recFase, newJenjang)[0];
+
+    if (matched) {
+      onLoadPreset(matched);
+    } else {
+      setLearningIdentity((prev) => ({
+        ...prev,
+        jenjang: newJenjang,
+        grade: defaultGrade,
+        fase: recFase,
+        minutesPerJp: config.defaultMinutesPerJp,
+        jpPerWeek: config.defaultJpPerWeek,
+        vocationalProgram: newJenjang === 'SMK_MAK' ? (prev.vocationalProgram || 'Rekayasa Perangkat Lunak') : undefined,
+        yearsOfStudy: newJenjang === 'SMK_MAK' ? 3 : undefined,
+      }));
+    }
+  };
+
+  const handleFaseChange = (newFase: Fase) => {
+    // If there is an official preset matching current subject in the new fase, load it immediately!
+    const matched = findMatchingPreset(newFase, learningIdentity.subjectName, learningIdentity.jenjang);
+    if (matched) {
+      onLoadPreset(matched);
+    } else {
+      setLearningIdentity((p) => ({
+        ...p,
+        fase: newFase,
+      }));
+    }
   };
 
   const handleGradeChange = (newGrade: string) => {
     const recFase = recommendFase(learningIdentity.jenjang, newGrade);
-    setLearningIdentity((prev) => ({
-      ...prev,
-      grade: newGrade,
-      fase: recFase,
-    }));
+    if (recFase !== learningIdentity.fase) {
+      handleFaseChange(recFase);
+    } else {
+      setLearningIdentity((prev) => ({
+        ...prev,
+        grade: newGrade,
+      }));
+    }
   };
 
   const totalPhaseJp =
@@ -104,8 +172,22 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
               <option value="" disabled>
                 -- Pilih Cepat Template --
               </option>
-              <optgroup label="🏫 SD / MI (Fase A, B, C)">
-                {CURRICULUM_PRESETS.filter((p) => p.jenjang === 'SD_MI').map((preset) => (
+              <optgroup label="🏫 SD / MI - Fase A (Kelas I & II)">
+                {CURRICULUM_PRESETS.filter((p) => p.jenjang === 'SD_MI' && p.fase === 'Fase A').map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.title}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="🏫 SD / MI - Fase B (Kelas III & IV)">
+                {CURRICULUM_PRESETS.filter((p) => p.jenjang === 'SD_MI' && p.fase === 'Fase B').map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.title}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="🏫 SD / MI - Fase C (Kelas V & VI)">
+                {CURRICULUM_PRESETS.filter((p) => p.jenjang === 'SD_MI' && p.fase === 'Fase C').map((preset) => (
                   <option key={preset.id} value={preset.id}>
                     {preset.title}
                   </option>
@@ -303,12 +385,7 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
                 </label>
                 <select
                   value={learningIdentity.fase}
-                  onChange={(e) =>
-                    setLearningIdentity((p) => ({
-                      ...p,
-                      fase: e.target.value as Fase,
-                    }))
-                  }
+                  onChange={(e) => handleFaseChange(e.target.value as Fase)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-bold text-blue-900 bg-blue-50/50"
                 >
                   {jenjangConfig.allowedFase.map((f) => (
@@ -359,6 +436,40 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
               </div>
             </div>
 
+            {/* Pilihan Cepat Mapel Resmi Sesuai Fase & Jenjang */}
+            <div className="p-3 bg-gradient-to-r from-blue-50/70 to-indigo-50/70 border border-blue-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-blue-950 flex items-center space-x-1.5">
+                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  <span>Katalog Mapel Resmi {learningIdentity.fase} ({jenjangConfig.label})</span>
+                </label>
+                <span className="text-[10px] font-semibold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full">
+                  {fasePresets.length} Mapel Resmi
+                </span>
+              </div>
+              <select
+                aria-label="Pilih Mata Pelajaran Resmi Sesuai Fase"
+                value={matchingPreset?.id || ''}
+                onChange={(e) => {
+                  const found = CURRICULUM_PRESETS.find((p) => p.id === e.target.value);
+                  if (found) {
+                    onLoadPreset(found);
+                  }
+                }}
+                className="w-full px-3 py-2 text-xs border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-semibold text-blue-950 bg-white shadow-2xs"
+              >
+                <option value="">-- Pilih Mata Pelajaran Resmi ({fasePresets.length} Pilihan Tersedia) --</option>
+                {fasePresets.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.subjectName} ({p.elements.length} Elemen CP Resmi)
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-blue-800 leading-relaxed">
+                Memilih mapel dari katalog ini akan <strong>otomatis menginput seluruh teks Capaian Pembelajaran (CP) dan elemen autentik</strong> dari <em>Kepka BSKAP Nomor 046/H/KR/2025</em> (atau <em>Kepka BKPDM Nomor 020 Tahun 2026</em> untuk Pendidikan Agama).
+              </p>
+            </div>
+
             {/* Mata Pelajaran & SMK Program */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className={learningIdentity.jenjang === 'SMK_MAK' ? '' : 'sm:col-span-2'}>
@@ -372,15 +483,56 @@ export const IdentityForm: React.FC<IdentityFormProps> = ({
                   placeholder="Contoh: Matematika, Bahasa Indonesia, PAI, RPL"
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-medium"
                 />
-                <div className="mt-1 flex items-center space-x-1.5 text-[11px] text-slate-500">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>
-                    Rujukan Dokumen CP:{' '}
-                    <strong className="text-blue-900">
-                      {getSubjectRegulationRef(learningIdentity.subjectName)}
-                    </strong>
-                  </span>
-                </div>
+
+                {/* Status Validasi CP Autentik */}
+                {matchingPreset ? (
+                  isSyncedWithOfficial ? (
+                    <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-300 rounded-lg flex items-center justify-between gap-2 text-xs text-emerald-900 shadow-2xs">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <div>
+                          <span className="font-bold">Naskah CP &amp; Elemen Resmi Terverifikasi Penuh</span>
+                          <span className="block text-[11px] text-emerald-700">
+                            Rujukan: <strong>{matchingPreset.regulationRef}</strong> • {matchingPreset.elements.length} Elemen ({matchingPreset.title})
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 font-bold text-[10px] whitespace-nowrap">
+                        100% Autentik
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-amber-950 shadow-2xs">
+                      <div className="flex items-start space-x-2">
+                        <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold">Tersedia Naskah CP Resmi Kemendikdasmen:</span>
+                          <p className="text-[11px] text-amber-800">
+                            {matchingPreset.title} • {matchingPreset.regulationRef}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onLoadPreset(matchingPreset)}
+                        className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition-all shadow-xs cursor-pointer whitespace-nowrap"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Terapkan CP Resmi ({matchingPreset.elements.length} Elemen)</span>
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <div className="mt-1 flex items-center space-x-1.5 text-[11px] text-slate-500">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>
+                      Rujukan Dokumen CP:{' '}
+                      <strong className="text-blue-900">
+                        {getSubjectRegulationRef(learningIdentity.subjectName)}
+                      </strong>
+                    </span>
+                  </div>
+                )}
               </div>
 
               {learningIdentity.jenjang === 'SMK_MAK' && (

@@ -343,7 +343,94 @@ export function getSubjectRegulationRef(subjectName: string): string {
     s.includes('khonghucu');
 
   if (isAgama) {
-    return 'Kepka BKPDM No. 020 Tahun 2026';
+    return 'Kepka BKPDM Nomor 020 Tahun 2026';
   }
-  return 'Kepka BSKAP No. 046 Tahun 2025';
+  return 'Kepka BSKAP Nomor 046/H/KR/2025';
+}
+
+export function getPresetsForFaseAndJenjang(fase: Fase, jenjang?: Jenjang): CurriculumPreset[] {
+  return CURRICULUM_PRESETS.filter((p) => p.fase === fase && (!jenjang || p.jenjang === jenjang));
+}
+
+export function findMatchingPreset(
+  fase: Fase,
+  subjectName: string,
+  jenjang?: Jenjang
+): CurriculumPreset | undefined {
+  if (!subjectName || !subjectName.trim()) return undefined;
+  const s = subjectName.trim().toLowerCase();
+
+  // 1. Prioritize same fase and jenjang
+  let pool = CURRICULUM_PRESETS.filter((p) => p.fase === fase);
+  if (jenjang) {
+    const withJenjang = pool.filter((p) => p.jenjang === jenjang);
+    if (withJenjang.length > 0) pool = withJenjang;
+  }
+
+  // Exact subjectName match
+  let found = pool.find((p) => p.subjectName.toLowerCase() === s);
+  if (found) return found;
+
+  // Partial match in subjectName
+  found = pool.find((p) => p.subjectName.toLowerCase().includes(s) || s.includes(p.subjectName.toLowerCase()));
+  if (found) return found;
+
+  // Title match
+  found = pool.find((p) => p.title.toLowerCase().includes(s));
+  if (found) return found;
+
+  // Specialized keywords
+  if (s.includes('pai') || s.includes('agama islam') || s.includes('paibp')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('agama islam') || p.id.includes('pai'));
+    if (found) return found;
+  }
+  if (s.includes('matematik') || s.includes('mtk')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('matematika'));
+    if (found) return found;
+  }
+  if (s.includes('ipa') || s.includes('alam')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('alam') || p.id.includes('ipa'));
+    if (found) return found;
+  }
+  if (s.includes('ips') || s.includes('sosial')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('sosial') || p.id.includes('ips'));
+    if (found) return found;
+  }
+  if (s.includes('pjok') || s.includes('olahraga') || s.includes('jasmani')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('jasmani') || p.id.includes('pjok'));
+    if (found) return found;
+  }
+  if (s.includes('kka') || s.includes('koding') || s.includes('kecerdasan artifisial') || s.includes('ai')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('koding') || p.id.includes('kka'));
+    if (found) return found;
+  }
+  if (s.includes('seni') || s.includes('rupa') || s.includes('musik')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('seni'));
+    if (found) return found;
+  }
+  if (s.includes('pancasila') || s.includes('ppkn')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('pancasila'));
+    if (found) return found;
+  }
+  if (s.includes('inggris') || s.includes('english')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('inggris'));
+    if (found) return found;
+  }
+  if (s.includes('indonesia')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('indonesia'));
+    if (found) return found;
+  }
+  if (s.includes('sunda') || s.includes('jawa') || s.includes('daerah') || s.includes('mulok')) {
+    found = pool.find((p) => p.subjectName.toLowerCase().includes('daerah') || p.id.includes('sunda') || p.id.includes('bd'));
+    if (found) return found;
+  }
+
+  // Fallback: search across any fase
+  if (!found) {
+    found = CURRICULUM_PRESETS.find(
+      (p) => p.subjectName.toLowerCase().includes(s) || s.includes(p.subjectName.toLowerCase())
+    );
+  }
+
+  return found;
 }
